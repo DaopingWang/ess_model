@@ -96,3 +96,44 @@ RevenueCalculator::RevenueCalculator() {
     rInfo.initialized = false;
     uParams.initialized = false;
 }
+
+void RevenueCalculator::calculateRInfo() {
+    int k = uParams.maxCycles, n = uParams.prices.size();
+
+    if (k > n / 2) {
+        // no cycle limitation
+        vector<double> neutral(n, 0);
+        vector<double> charged(n, INT32_MIN);
+        charged[0] = -chargePrices[0];
+        for (int i = 1; i < n; i++) {
+            int chargeCoolDown = max(0, i-uParams.tCharge);
+            int dischargeCoolDown = max(0, i-uParams.tDischarge);
+            neutral[i] = max(neutral[i-1], charged[chargeCoolDown] + dischargePrices[i]);
+            charged[i] = max(charged[i-1], neutral[dischargeCoolDown] - chargePrices[i]);
+        }
+        rInfo.totalRevenue = neutral[n-1];
+        return;
+    }
+
+    vector<vector<double>> neutral(n, vector<double>(k+1, 0));
+    vector<vector<double>> charged(n, vector<double>(k+1, INT32_MIN));
+    charged[0][0] = -chargePrices[0];
+    for (int i = 1; i < n; i++) {
+        charged[i][0] = max(charged[i-1][0], -chargePrices[i]);
+    }
+    for (int j = 1; j <= k; j++) {
+        charged[0][j] = -chargePrices[0];
+    }
+
+    for (int i = 1; i < n; i++) {
+        for (int j = 1; j <= k; j++) {
+            int chargeCoolDown = max(0, i-uParams.tCharge);
+            int dischargeCoolDown = max(0, i-uParams.tDischarge);
+            // hold vs discharge
+            neutral[i][j] = max(neutral[i-1][j], charged[chargeCoolDown][j-1] + dischargePrices[i]);
+            // rest vs charge
+            charged[i][j] = max(charged[i-1][j], neutral[dischargeCoolDown][j] - chargePrices[i]);
+        }
+    }
+    rInfo.totalRevenue = neutral[n-1][k];
+}

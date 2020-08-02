@@ -36,6 +36,7 @@ class RevenueCalculator {
 public:
     RevenueCalculator();
     void calculateRevenueInfo();
+    void calculateRInfo();
     void setUserParams(vector<double>& prices, int tCharge, int tDischarge, double minPriceDiff, int maxCycles);
     RevenueInfo getRevenueInfo();
 private:
