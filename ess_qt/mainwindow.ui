@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>325</width>
+    <height>510</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ess_qt</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QGroupBox" name="groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>0</y>
+      <width>301</width>
+      <height>461</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>rMaxCalculator v0.01</string>
+    </property>
+    <widget class="QWidget" name="gridLayoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>20</y>
+       <width>299</width>
+       <height>441</height>
+      </rect>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="nCycleMaxEdit"/>
+      </item>
+      <item row="7" column="0" colspan="2">
+       <widget class="QTextBrowser" name="logBrowser"/>
+      </item>
+      <item row="6" column="0" colspan="2">
+       <widget class="QPushButton" name="saveResultAsButton">
+        <property name="text">
+         <string>Save result as...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QPushButton" name="rMaxButton">
+        <property name="text">
+         <string>Get rMax!</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="nCycleMaxLabel">
+        <property name="text">
+         <string>nCycleMax</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="deltaPMinEdit"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="tDischargeLabel">
+        <property name="text">
+         <string>tDischarge</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="tDischargeEdit"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="deltaPMinLabel">
+        <property name="text">
+         <string>deltaPMin</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="tChargeEdit"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="tChargeLabel">
+        <property name="text">
+         <string>tCharge</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>325</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="openFile"/>
+   </widget>
+   <addaction name="menuFile"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionFile">
+   <property name="text">
+    <string>File</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="openFile">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
