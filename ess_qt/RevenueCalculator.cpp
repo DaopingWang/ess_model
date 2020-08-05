@@ -5,7 +5,7 @@
 #include "RevenueCalculator.h"
 
 void
-RevenueCalculator::setUserParams(vector<double> &prices, int tCharge, int tDischarge, double minPriceDiff, int maxCycles) {
+RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles) {
     uParams.prices = prices;
     uParams.maxCycles = maxCycles;
     uParams.minPriceDiff = minPriceDiff;
@@ -13,19 +13,19 @@ RevenueCalculator::setUserParams(vector<double> &prices, int tCharge, int tDisch
     uParams.tDischarge = tDischarge;
     uParams.initialized = true;
 
-    for (int i = 0; i < prices.size(); i++) {
+    for (int i = 0; i < prices->size(); i++) {
         // calculate charge and discharge prices
         double c = 0, d = 0;
         for (int j = i; j < i + tCharge; j++) {
-            if (i - 1 + tCharge >= prices.size()) {
+            if (i - 1 + tCharge >= prices->size()) {
                 // remaining time not enough for a full charge
                 break;
             }
-            c += prices[j];
+            c += prices->at(j);
         }
         for (int j = i; j < i + tDischarge; j++) {
-            if (i - 1 + tDischarge >= prices.size()) break;
-            d += prices[j];
+            if (i - 1 + tDischarge >= prices->size()) break;
+            d += prices->at(j);
         }
         c /= tCharge;       // caution: divided by zero
         d /= tDischarge;
@@ -38,7 +38,7 @@ void RevenueCalculator::calculateRevenueInfo() {
     //if (!uParams.initialized) throw "User parameters not initialized!";
     // dynamic programming with Finite State Machine
     // https://www.youtube.com/watch?v=pkiJyNijgBw
-    int n = uParams.prices.size();
+    int n = uParams.prices->size();
     vector<double> neutral(n, INT32_MIN), charged(n, INT32_MIN);
 
     // number of charging states == tCharge - 1
@@ -98,7 +98,7 @@ RevenueCalculator::RevenueCalculator() {
 }
 
 void RevenueCalculator::calculateRInfo() {
-    int k = uParams.maxCycles, n = uParams.prices.size();
+    int k = uParams.maxCycles, n = uParams.prices->size();
 
     if (k > n / 2) {
         // no cycle limitation

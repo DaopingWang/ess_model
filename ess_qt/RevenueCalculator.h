@@ -24,7 +24,7 @@ struct RevenueInfo {
 };
 
 struct UserParams {
-    vector<double> prices;
+    vector<double> *prices;
     int tCharge;
     int tDischarge;
     double minPriceDiff;
@@ -37,7 +37,7 @@ public:
     RevenueCalculator();
     void calculateRevenueInfo();
     void calculateRInfo();
-    void setUserParams(vector<double>& prices, int tCharge, int tDischarge, double minPriceDiff, int maxCycles);
+    void setUserParams(vector<double>* prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles);
     RevenueInfo getRevenueInfo();
 private:
     RevenueInfo rInfo;

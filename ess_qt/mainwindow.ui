@@ -64,7 +64,11 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QLineEdit" name="deltaPMinEdit"/>
+       <widget class="QLineEdit" name="deltaPMinEdit">
+        <property name="text">
+         <string>0.0</string>
+        </property>
+       </widget>
       </item>
       <item row="4" column="0">
        <widget class="QLabel" name="tDischargeLabel">
@@ -74,7 +78,11 @@
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QLineEdit" name="tDischargeEdit"/>
+       <widget class="QLineEdit" name="tDischargeEdit">
+        <property name="text">
+         <string>2</string>
+        </property>
+       </widget>
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="deltaPMinLabel">
@@ -84,7 +92,11 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QLineEdit" name="tChargeEdit"/>
+       <widget class="QLineEdit" name="tChargeEdit">
+        <property name="text">
+         <string>2</string>
+        </property>
+       </widget>
       </item>
       <item row="3" column="0">
        <widget class="QLabel" name="tChargeLabel">
