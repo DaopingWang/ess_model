@@ -37,7 +37,11 @@
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="1">
-       <widget class="QLineEdit" name="nCycleMaxEdit"/>
+       <widget class="QLineEdit" name="nCycleMaxEdit">
+        <property name="text">
+         <string>1095</string>
+        </property>
+       </widget>
       </item>
       <item row="7" column="0" colspan="2">
        <widget class="QTextBrowser" name="logBrowser"/>
@@ -80,7 +84,7 @@
       <item row="4" column="1">
        <widget class="QLineEdit" name="tDischargeEdit">
         <property name="text">
-         <string>2</string>
+         <string>1</string>
         </property>
        </widget>
       </item>
@@ -94,7 +98,7 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="tChargeEdit">
         <property name="text">
-         <string>2</string>
+         <string>1</string>
         </property>
        </widget>
       </item>

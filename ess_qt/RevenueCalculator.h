@@ -35,8 +35,9 @@ struct UserParams {
 class RevenueCalculator {
 public:
     RevenueCalculator();
-    void calculateRevenueInfo();
+    void automataReference();
     void calculateRInfo();
+    int rMaxReference(int k);
     void setUserParams(vector<double>* prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles);
     RevenueInfo getRevenueInfo();
 private:

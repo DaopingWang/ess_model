@@ -6,6 +6,11 @@
 
 void
 RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles) {
+    if (uParams.initialized) {
+        chargePrices.clear();
+        dischargePrices.clear();
+    }
+
     uParams.prices = prices;
     uParams.maxCycles = maxCycles;
     uParams.minPriceDiff = minPriceDiff;
@@ -34,7 +39,7 @@ RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, cons
     }
 }
 
-void RevenueCalculator::calculateRevenueInfo() {
+void RevenueCalculator::automataReference() {
     //if (!uParams.initialized) throw "User parameters not initialized!";
     // dynamic programming with Finite State Machine
     // https://www.youtube.com/watch?v=pkiJyNijgBw
@@ -136,4 +141,19 @@ void RevenueCalculator::calculateRInfo() {
         }
     }
     rInfo.totalRevenue = neutral[n-1][k];
+}
+
+int RevenueCalculator::rMaxReference(int k) {
+    vector<double> T_ik0(k+1, 0);
+    vector<double> T_ik1(k+1, INT32_MIN);
+    vector<double> prices = *(uParams.prices);
+
+    for (double p : prices) {
+        for (int j = k; j > 0; j--) {
+            T_ik0[j] = max(T_ik0[j], T_ik1[j] + p);
+            T_ik1[j] = max(T_ik1[j], T_ik0[j - 1] - p);
+        }
+    }
+
+    return T_ik0[k];
 }

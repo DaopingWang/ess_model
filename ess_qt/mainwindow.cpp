@@ -38,6 +38,7 @@ void MainWindow::on_rMaxButton_clicked()
     double minPriceDiff = ui->deltaPMinEdit->text().isEmpty() ? 0.0 : ui->deltaPMinEdit->text().toDouble();
     int nCycleMax = ui->nCycleMaxEdit->text().isEmpty() ? INT32_MAX : ui->nCycleMaxEdit->text().toInt();
 
+    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: ------------------");
     // TODO set uParams etc
     rCal->setUserParams(priceData, ui->tChargeEdit->text().toInt(), ui->tDischargeEdit->text().toInt(), minPriceDiff, nCycleMax);
     logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: User params loaded");
@@ -46,14 +47,16 @@ void MainWindow::on_rMaxButton_clicked()
     rCal->calculateRInfo();
     logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax calculated");
 
-    int rMax = rCal->getRevenueInfo().totalRevenue;
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax = " + QString::number(rMax));
+    double rMax = rCal->getRevenueInfo().totalRevenue;
+    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax = " + QString::number(rMax, 'f', 2));
 
     // debug
-    rCal->calculateRevenueInfo();
+    rCal->automataReference();
     rMax = rCal->getRevenueInfo().totalRevenue;
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Automata rMax = " + QString::number(rMax));
+    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Automata rMax = " + QString::number(rMax, 'f', 2));
 
+    rMax = rCal->rMaxReference(ui->nCycleMaxEdit->text().toInt());
+    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: K Reference rMax = " + QString::number(rMax, 'f', 2));
 }
 
 void MainWindow::on_saveResultAsButton_clicked()
