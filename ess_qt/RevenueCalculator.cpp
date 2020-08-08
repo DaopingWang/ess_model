@@ -4,6 +4,12 @@
 
 #include "RevenueCalculator.h"
 
+RevenueCalculator::RevenueCalculator() {
+    rInfo.initialized = false;
+    uParams.initialized = false;
+
+}
+
 void
 RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles) {
     if (uParams.initialized) {
@@ -28,15 +34,161 @@ RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, cons
             }
             c += prices->at(j);
         }
+
         for (int j = i; j < i + tDischarge; j++) {
-            if (i - 1 + tDischarge >= prices->size()) break;
+            if (i - 1 + tDischarge >= prices->size()) {
+                break;
+            }
             d += prices->at(j);
         }
         c /= tCharge;       // caution: divided by zero
         d /= tDischarge;
+
+        if (i - 1 + tCharge >= prices->size()) c = INT32_MAX;
         chargePrices.push_back(c);
+
+        if (i - 1 + tDischarge >= prices->size()) d = INT32_MIN;
         dischargePrices.push_back(d);
     }
+}
+
+RevenueInfo RevenueCalculator::getRevenueInfo() {
+    return rInfo;
+}
+
+void RevenueCalculator::calRMaxCycleUnlimited()
+{
+    int n = uParams.prices->size();
+    int tCycle = uParams.tCharge + uParams.tDischarge;
+    vector<double> neutral(n, 0);
+    vector<double> charged(n, INT32_MIN);
+    vector<int> chargeDates, dischargeDates;
+    charged[0] = -chargePrices[0];
+    chargeDates.push_back(0);
+
+    int prevDischarge = -1;
+
+    for (int i = 1; i < n; i++) { //- (uParams.tDischarge - 1)
+        int chargeCoolDown = max(0, i-uParams.tCharge);
+        int dischargeCoolDown = max(0, i-uParams.tDischarge);
+
+        // discharge?
+        if (i == n-1 && prevDischarge != -1) {
+            addCycleTiming(prevDischarge, chargeDates);
+        } else if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
+            dischargeDates.push_back(i);
+
+            // if this discharge isnt the first, and the distance between this discharge and
+            // last discharge is greater than tCycle (last tdischarge guarantees a cycle)
+            if ((prevDischarge != -1 && i - prevDischarge >= tCycle)) {
+                addCycleTiming(prevDischarge, chargeDates);
+            }
+            prevDischarge = i;
+        }
+        neutral[i] = max(neutral[i-1], charged[chargeCoolDown] + dischargePrices[i]);
+
+        // charge?
+        if (neutral[dischargeCoolDown] - chargePrices[i] > charged[i-1]) {
+            chargeDates.push_back(i);
+        }
+        charged[i] = max(charged[i-1], neutral[dischargeCoolDown] - chargePrices[i]);
+    }
+
+    rInfo.totalRevenue = neutral[n-1];
+}
+
+void RevenueCalculator::addCycleTiming(int prevDischarge, vector<int> &chargeDates)
+{
+    // seek the last valid charge before prevDischarge
+    int prevCharge = chargeDates[0];
+    int j = 1;
+    while (j < chargeDates.size() && (prevDischarge - chargeDates[j] >= uParams.tDischarge)) {
+        prevCharge = chargeDates[j];
+        j++;
+    }
+    rInfo.cycleTiming.push_back({prevCharge, prevDischarge});
+}
+
+// CORE ALGORITHM
+void RevenueCalculator::calculateRInfo() {
+    // flush histories
+    rInfo.cycleTiming.clear();
+
+    int k = uParams.maxCycles, n = uParams.prices->size();
+
+    // no cycle limitation
+    if (k > n / 2) {
+        calRMaxCycleUnlimited();
+        return;
+    }
+
+    int tCycle = uParams.tCharge + uParams.tDischarge;
+
+    // cycle number limited
+    vector<vector<double>> neutral(n, vector<double>(k+1, 0));
+    vector<vector<double>> charged(n, vector<double>(k+1, INT32_MIN));
+    vector<vector<int>> chargeDates(k+1, vector<int>()), dischargeDates(k+1, vector<int>());
+    for (int i = 1; i <= k; i++) {
+        chargeDates[i].push_back(0);
+    }
+
+    charged[0][0] = -chargePrices[0];
+    for (int i = 1; i < n; i++) {
+        charged[i][0] = max(charged[i-1][0], -chargePrices[i]);
+    }
+    for (int j = 1; j <= k; j++) {
+        charged[0][j] = -chargePrices[0];
+    }
+
+    for (int i = 1; i < n; i++) {
+        for (int j = 1; j <= k; j++) {
+            int chargeCoolDown = max(0, i-uParams.tCharge);
+            int dischargeCoolDown = max(0, i-uParams.tDischarge);
+
+            // hold vs discharge
+            if (charged[chargeCoolDown][j-1] + dischargePrices[i] > neutral[i-1][j]) {
+                dischargeDates[j].push_back(i);
+                neutral[i][j] = charged[chargeCoolDown][j-1] + dischargePrices[i];
+            } else {
+                neutral[i][j] = neutral[i-1][j];
+            }
+
+            // rest vs charge
+            if (neutral[dischargeCoolDown][j] - chargePrices[i] > charged[i-1][j]) {
+                chargeDates[j].push_back(i);
+                charged[i][j] = neutral[dischargeCoolDown][j] - chargePrices[i];
+            } else {
+                charged[i][j] = charged[i-1][j];
+            }
+
+        }
+    }
+
+    int prevDischarge = -1;
+    for (int i = 0; i < dischargeDates[k].size(); i++) {
+        if ((prevDischarge != -1 && dischargeDates[k][i] - prevDischarge >= tCycle)) {
+            addCycleTiming(prevDischarge, chargeDates[k]);
+        }
+        prevDischarge = dischargeDates[k][i];
+    }
+    if (prevDischarge != -1)
+        addCycleTiming(prevDischarge, chargeDates[k]);
+    rInfo.totalRevenue = neutral[n-1][k];
+}
+
+int RevenueCalculator::rMaxReference(int k) {
+    vector<double> T_ik0(k+1, 0);
+    vector<double> T_ik1(k+1, INT32_MIN);
+    vector<double> prices = *(uParams.prices);
+
+    for (double p : prices) {
+        for (int j = k; j > 0; j--) {
+            T_ik0[j] = max(T_ik0[j], T_ik1[j] + p);
+            T_ik1[j] = max(T_ik1[j], T_ik0[j - 1] - p);
+        }
+    }
+
+    return T_ik0[k];
 }
 
 void RevenueCalculator::automataReference() {
@@ -90,70 +242,4 @@ void RevenueCalculator::automataReference() {
     else {
         rInfo.revenues = charged;
     }
-}
-
-RevenueInfo RevenueCalculator::getRevenueInfo() {
-    //if (!rInfo.initialized) throw "Revenue information not initialized!";
-    return rInfo;
-}
-
-RevenueCalculator::RevenueCalculator() {
-    rInfo.initialized = false;
-    uParams.initialized = false;
-}
-
-void RevenueCalculator::calculateRInfo() {
-    int k = uParams.maxCycles, n = uParams.prices->size();
-
-    if (k > n / 2) {
-        // no cycle limitation
-        vector<double> neutral(n, 0);
-        vector<double> charged(n, INT32_MIN);
-        charged[0] = -chargePrices[0];
-        for (int i = 1; i < n; i++) {
-            int chargeCoolDown = max(0, i-uParams.tCharge);
-            int dischargeCoolDown = max(0, i-uParams.tDischarge);
-            neutral[i] = max(neutral[i-1], charged[chargeCoolDown] + dischargePrices[i]);
-            charged[i] = max(charged[i-1], neutral[dischargeCoolDown] - chargePrices[i]);
-        }
-        rInfo.totalRevenue = neutral[n-1];
-        return;
-    }
-
-    vector<vector<double>> neutral(n, vector<double>(k+1, 0));
-    vector<vector<double>> charged(n, vector<double>(k+1, INT32_MIN));
-    charged[0][0] = -chargePrices[0];
-    for (int i = 1; i < n; i++) {
-        charged[i][0] = max(charged[i-1][0], -chargePrices[i]);
-    }
-    for (int j = 1; j <= k; j++) {
-        charged[0][j] = -chargePrices[0];
-    }
-
-    for (int i = 1; i < n; i++) {
-        for (int j = 1; j <= k; j++) {
-            int chargeCoolDown = max(0, i-uParams.tCharge);
-            int dischargeCoolDown = max(0, i-uParams.tDischarge);
-            // hold vs discharge
-            neutral[i][j] = max(neutral[i-1][j], charged[chargeCoolDown][j-1] + dischargePrices[i]);
-            // rest vs charge
-            charged[i][j] = max(charged[i-1][j], neutral[dischargeCoolDown][j] - chargePrices[i]);
-        }
-    }
-    rInfo.totalRevenue = neutral[n-1][k];
-}
-
-int RevenueCalculator::rMaxReference(int k) {
-    vector<double> T_ik0(k+1, 0);
-    vector<double> T_ik1(k+1, INT32_MIN);
-    vector<double> prices = *(uParams.prices);
-
-    for (double p : prices) {
-        for (int j = k; j > 0; j--) {
-            T_ik0[j] = max(T_ik0[j], T_ik1[j] + p);
-            T_ik1[j] = max(T_ik1[j], T_ik0[j - 1] - p);
-        }
-    }
-
-    return T_ik0[k];
 }

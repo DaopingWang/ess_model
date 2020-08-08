@@ -35,6 +35,10 @@ private slots:
 
     void on_openFile_triggered();
 
+    void on_pushButton_clicked();
+
+    void on_actionRun_debug_content_triggered();
+
 private:
     void logText(const QString& t);
     bool validateUserParams();

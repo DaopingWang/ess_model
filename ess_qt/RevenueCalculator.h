@@ -18,7 +18,7 @@ struct RevenueInfo {
     int cycles;
     vector<int> chargeDates;
     vector<int> dischargeDates;
-    vector<pair<int, int>> transactionDates;
+    vector<pair<int, int>> cycleTiming;
     vector<double> revenues;
     bool initialized;
 };
@@ -43,9 +43,11 @@ public:
 private:
     RevenueInfo rInfo;
     UserParams uParams;
-
     vector<double> chargePrices;
     vector<double> dischargePrices;
+
+    void calRMaxCycleUnlimited();
+    void addCycleTiming(int prevDischarge, vector<int> &chargeDates);
 };
 
 

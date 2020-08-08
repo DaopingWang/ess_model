@@ -43,17 +43,17 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0" colspan="2">
+      <item row="8" column="0" colspan="2">
        <widget class="QTextBrowser" name="logBrowser"/>
       </item>
-      <item row="6" column="0" colspan="2">
+      <item row="7" column="0" colspan="2">
        <widget class="QPushButton" name="saveResultAsButton">
         <property name="text">
-         <string>Save result as...</string>
+         <string>Save result as</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="0" colspan="2">
+      <item row="6" column="0" colspan="2">
        <widget class="QPushButton" name="rMaxButton">
         <property name="text">
          <string>Get rMax!</string>
@@ -109,6 +109,13 @@
         </property>
        </widget>
       </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Load CSV file</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </widget>
@@ -128,6 +135,7 @@
     </property>
     <addaction name="separator"/>
     <addaction name="openFile"/>
+    <addaction name="actionRun_debug_content"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -150,6 +158,11 @@
   <action name="openFile">
    <property name="text">
     <string>Open...</string>
+   </property>
+  </action>
+  <action name="actionRun_debug_content">
+   <property name="text">
+    <string>Run debug content</string>
    </property>
   </action>
  </widget>
