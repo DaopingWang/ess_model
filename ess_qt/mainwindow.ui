@@ -6,50 +6,73 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>325</width>
+    <width>610</width>
     <height>510</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>610</width>
+    <height>510</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>610</width>
+    <height>510</height>
+   </size>
+  </property>
   <property name="windowTitle">
-   <string>ess_qt</string>
+   <string>Project Thor rMax Calculator v0.01</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>0</x>
       <y>0</y>
-      <width>301</width>
-      <height>461</height>
+      <width>610</width>
+      <height>510</height>
      </rect>
     </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
     <property name="title">
-     <string>rMaxCalculator v0.01</string>
+     <string>User Parameters</string>
     </property>
     <widget class="QWidget" name="gridLayoutWidget">
      <property name="geometry">
       <rect>
        <x>0</x>
        <y>20</y>
-       <width>299</width>
+       <width>601</width>
        <height>441</height>
       </rect>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="nCycleMaxEdit">
+      <item row="5" column="0" colspan="2">
+       <widget class="QPushButton" name="pushButton">
         <property name="text">
-         <string>1095</string>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="0" colspan="2">
-       <widget class="QTextBrowser" name="logBrowser"/>
-      </item>
-      <item row="7" column="0" colspan="2">
-       <widget class="QPushButton" name="saveResultAsButton">
-        <property name="text">
-         <string>Save result as</string>
+         <string>Load CSV file</string>
         </property>
        </widget>
       </item>
@@ -60,20 +83,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="nCycleMaxLabel">
-        <property name="text">
-         <string>nCycleMax</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="deltaPMinEdit">
-        <property name="text">
-         <string>0.0</string>
-        </property>
-       </widget>
-      </item>
       <item row="4" column="0">
        <widget class="QLabel" name="tDischargeLabel">
         <property name="text">
@@ -81,17 +90,27 @@
         </property>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="nCycleMaxLabel">
+        <property name="text">
+         <string>nCycleMax</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="nCycleMaxEdit">
+        <property name="text">
+         <string>1095</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0" colspan="2">
+       <widget class="QTextBrowser" name="logBrowser"/>
+      </item>
       <item row="4" column="1">
        <widget class="QLineEdit" name="tDischargeEdit">
         <property name="text">
          <string>1</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="deltaPMinLabel">
-        <property name="text">
-         <string>deltaPMin</string>
         </property>
        </widget>
       </item>
@@ -102,6 +121,27 @@
         </property>
        </widget>
       </item>
+      <item row="7" column="0" colspan="2">
+       <widget class="QPushButton" name="saveResultAsButton">
+        <property name="text">
+         <string>Save result as</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="deltaPMinEdit">
+        <property name="text">
+         <string>0.0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="deltaPMinLabel">
+        <property name="text">
+         <string>deltaPMin</string>
+        </property>
+       </widget>
+      </item>
       <item row="3" column="0">
        <widget class="QLabel" name="tChargeLabel">
         <property name="text">
@@ -109,10 +149,10 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0" colspan="2">
-       <widget class="QPushButton" name="pushButton">
+      <item row="9" column="0" colspan="2">
+       <widget class="QPushButton" name="pushButton_2">
         <property name="text">
-         <string>Load CSV file</string>
+         <string>Clear log</string>
         </property>
        </widget>
       </item>
@@ -125,7 +165,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>325</width>
+     <width>610</width>
      <height>22</height>
     </rect>
    </property>
@@ -135,6 +175,8 @@
     </property>
     <addaction name="separator"/>
     <addaction name="openFile"/>
+    <addaction name="actionSave_as"/>
+    <addaction name="separator"/>
     <addaction name="actionRun_debug_content"/>
    </widget>
    <addaction name="menuFile"/>
@@ -163,6 +205,11 @@
   <action name="actionRun_debug_content">
    <property name="text">
     <string>Run debug content</string>
+   </property>
+  </action>
+  <action name="actionSave_as">
+   <property name="text">
+    <string>Save as...</string>
    </property>
   </action>
  </widget>

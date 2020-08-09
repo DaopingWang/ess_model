@@ -39,6 +39,10 @@ private slots:
 
     void on_actionRun_debug_content_triggered();
 
+    void on_pushButton_2_clicked();
+
+    void on_actionSave_as_triggered();
+
 private:
     void logText(const QString& t);
     bool validateUserParams();
@@ -49,6 +53,7 @@ private:
     QStringList *priceDataDates;
     vector<double> *priceData;
 
+    QString openedFilename;
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H

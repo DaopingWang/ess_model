@@ -23,8 +23,9 @@ struct RevenueLink {
 struct RevenueInfo {
     double totalRevenue;
     double validationSum;
+    double filteredSum;
     vector<pair<int, int>> cycleTiming;
-    vector<double> revenues;
+    vector<pair<int, int>> filteredCycleTiming;
     bool initialized;
 };
 

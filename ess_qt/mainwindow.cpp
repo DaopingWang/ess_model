@@ -38,50 +38,52 @@ void MainWindow::on_rMaxButton_clicked()
     double minPriceDiff = ui->deltaPMinEdit->text().isEmpty() ? 0.0 : ui->deltaPMinEdit->text().toDouble();
     int nCycleMax = ui->nCycleMaxEdit->text().isEmpty() ? INT32_MAX : ui->nCycleMaxEdit->text().toInt();
 
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: ------------------");
-    // TODO set uParams etc
-    rCal->setUserParams(priceData, ui->tChargeEdit->text().toInt(), ui->tDischargeEdit->text().toInt(), minPriceDiff, nCycleMax);
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: User params loaded");
+    logText("[" + QDateTime::currentDateTime().toString() + "]: ==============================================");
+    logText("[" + QDateTime::currentDateTime().toString() + "]: Current file: " + openedFilename);
 
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Calculating rMax...");
+    // set uParams etc
+    rCal->setUserParams(priceData, ui->tChargeEdit->text().toInt(), ui->tDischargeEdit->text().toInt(), minPriceDiff, nCycleMax);
+    //logText("[" + QDateTime::currentDateTime().toString() + "]: User params loaded");
+
+    //logText("[" + QDateTime::currentDateTime().toString() + "]: Calculating rMax...");
     rCal->calculateRInfo();
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax calculated");
+    //logText("[" + QDateTime::currentDateTime().toString() + "]: rMax calculated");
 
     double rMax = rCal->getRevenueInfo().totalRevenue;
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax = " + QString::number(rMax, 'f', 2));
+    int nCycle = rCal->getRevenueInfo().cycleTiming.size();
+    bool validationResult = rCal->cycleValidation();
+
+    if (minPriceDiff != 0) {
+        double filteredRMax = rCal->getRevenueInfo().filteredSum;
+        int filteredNCycle = rCal->getRevenueInfo().filteredCycleTiming.size();
+        logText("[" + QDateTime::currentDateTime().toString() + "]: rMax = " + QString::number(filteredRMax, 'f', 2));
+        logText("[" + QDateTime::currentDateTime().toString() + "]: nCycle = " + QString::number(filteredNCycle));
+    } else {
+        logText("[" + QDateTime::currentDateTime().toString() + "]: rMax = " + QString::number(rMax, 'f', 2));
+        logText("[" + QDateTime::currentDateTime().toString() + "]: nCycle = " + QString::number(nCycle));
+    }
+
 
     // debug
    /* rCal->automataReference();
     rMax = rCal->getRevenueInfo().totalRevenue;
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Automata rMax = " + QString::number(rMax, 'f', 2));*/
+    logText("[" + QDateTime::currentDateTime().toString() + "]: Automata rMax = " + QString::number(rMax, 'f', 2));*/
 
-    rMax = rCal->rMaxReference(ui->nCycleMaxEdit->text().toInt());
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: K Reference rMax = " + QString::number(rMax, 'f', 2));
-    if (rCal->cycleValidation()) logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification successful");
-    else logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification failed: "  + QString::number(rCal->getRevenueInfo().validationSum));
-}
+    if (validationResult) logText("[" + QDateTime::currentDateTime().toString() + "]: Result validation successful");
+    else logText("[" + QDateTime::currentDateTime().toString() + "]: Validation failed: "  + QString::number(rCal->getRevenueInfo().validationSum));
 
-void MainWindow::on_saveResultAsButton_clicked()
-{
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Result saved");
+    if (ui->tChargeEdit->text().toInt() == 1 && ui->tDischargeEdit->text().toInt() == 1 && minPriceDiff == 0) {
+        double reference = rCal->rMaxReference(nCycleMax);
+        if (abs(rMax - reference) < 1.0) logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation successful");
+        else logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation failed: " + QString::number(reference, 'f', 2));
+
+    }
+    //logText("[" + QDateTime::currentDateTime().toString() + "]: ==============================================");
 }
 
 void MainWindow::on_openFile_triggered()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open the csv file");
-    if (!fileName.endsWith(".csv")) {
-        QMessageBox::warning(this, "Warning", "Cannot open file: Only CSV files are supported!");
-        return;
-    }
-    QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
-        return;
-    }
-
-    // TODO csv file contains unused columns, remove them based on headers
-
-    // reload metadata
+    // flush history
     if (priceData != nullptr) delete priceData;
     if (priceDataHeader != nullptr) delete priceDataHeader;
     if (priceDataDates != nullptr) delete priceDataDates;
@@ -91,6 +93,18 @@ void MainWindow::on_openFile_triggered()
     priceDataHeader = new QStringList();
     priceDataDates = new QStringList();
     hourColumnIndices = new vector<int>();
+
+    QString fileName = QFileDialog::getOpenFileName(this, "Open the csv file");
+    openedFilename = fileName;
+    if (!fileName.endsWith(".csv")) {
+        QMessageBox::warning(this, "Warning", "Cannot open file: Only CSV files are supported!");
+        return;
+    }
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
+        return;
+    }
 
     int lineInd = 0;
     while (!file.atEnd()) {
@@ -114,16 +128,23 @@ void MainWindow::on_openFile_triggered()
 
         // first element of each line is the price timestamp
         priceDataDates->append(splittedLine.at(0));
+        vector<double> curPrice;
         for (int i = 1; i < splittedLine.size(); i++) {
 
             // push price values into vector
             if (std::find(hourColumnIndices->begin(), hourColumnIndices->end(), i) != hourColumnIndices->end()) {
-                priceData->push_back(splittedLine.at(i).toDouble());
+                //priceData->push_back(splittedLine.at(i).toDouble());
+                curPrice.push_back(splittedLine.at(i).toDouble());
             }
         }
+
+        for (int i = curPrice.size()-1; i >= 0; i--) {
+            priceData->insert(priceData->begin(), curPrice[i]);
+        }
+
         lineInd++;
     }
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Price data csv successfully loaded!");
+    logText("[" + QDateTime::currentDateTime().toString() + "]: Price data csv successfully loaded: " + openedFilename);
 }
 
 void MainWindow::logText(const QString &t)
@@ -155,11 +176,11 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::on_actionRun_debug_content_triggered()
 {
-    RevenueCalculator* rCal = new RevenueCalculator();
+    /*RevenueCalculator* rCal = new RevenueCalculator();
     vector<double> prices = {14, 15, 10, 11, 17, 20, 32, 11, 10, 33, 33}; // cents
-    /*vector<double> prices = {24.14,22.12,13.01,4.97,9.81,18.37,23.50,27.17,36.56,
+    vector<double> prices = {24.14,22.12,13.01,4.97,9.81,18.37,23.50,27.17,36.56,
                              40.43,32.22,38.98,38.60,37.90,38.00,39.58,42.28,46.06,
-                             47.73,46.00,42.20,39.74,38.88,37.39};*/
+                             47.73,46.00,42.20,39.74,38.88,37.39};
 
     rCal->setUserParams(&prices,
                         ui->tChargeEdit->text().toInt(),
@@ -171,9 +192,24 @@ void MainWindow::on_actionRun_debug_content_triggered()
     logText("Maximum revenue reference: " + QString::number(rMax));
     rCal->calculateRInfo();
     logText("Maximum revenue func: " + QString::number(rCal->getRevenueInfo().totalRevenue));
-    if (rCal->cycleValidation()) logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification successful");
-    else logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification failed: " + QString::number(rCal->getRevenueInfo().validationSum));
+    if (rCal->cycleValidation()) logText("[" + QDateTime::currentDateTime().toString() + "]: Validation successful");
+    else logText("[" + QDateTime::currentDateTime().toString() + "]: Validation failed: " + QString::number(rCal->getRevenueInfo().validationSum));
 
-    delete rCal;
+    delete rCal;*/
     return;
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    ui->logBrowser->clear();
+}
+
+void MainWindow::on_actionSave_as_triggered()
+{
+    on_saveResultAsButton_clicked();
+}
+
+void MainWindow::on_saveResultAsButton_clicked()
+{
+    logText("[" + QDateTime::currentDateTime().toString() + "]: Result saved");
 }

@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by Daoping Wang on 30.07.20.
 //
 
@@ -12,6 +12,7 @@ RevenueCalculator::RevenueCalculator() {
 
 void
 RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles) {
+    // flush history
     if (uParams.initialized) {
         chargePrices.clear();
         dischargePrices.clear();
@@ -56,13 +57,24 @@ RevenueInfo RevenueCalculator::getRevenueInfo() {
     return rInfo;
 }
 
+// price diff is considered here
 bool RevenueCalculator::cycleValidation()
 {
     double r = 0;
-    for (pair<int, int> c : rInfo.cycleTiming) r += dischargePrices[c.second] - chargePrices[c.first];
+    double filteredR = 0;
+    for (pair<int, int> c : rInfo.cycleTiming) {
+        double revenue = dischargePrices[c.second] - chargePrices[c.first];
+        r += revenue;
+        if (revenue >= uParams.minPriceDiff) {
+            filteredR += revenue;
+            rInfo.filteredCycleTiming.push_back(c);
+        }
+    }
     rInfo.validationSum = r;
+    rInfo.filteredSum = filteredR;
     if ((int) r != (int) rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
     return true;
+
 }
 
 void RevenueCalculator::calRMaxCycleUnlimited()
@@ -137,21 +149,11 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     rInfo.totalRevenue = neutral[n-1];
 }
 
-void RevenueCalculator::addCycleTiming(int prevDischarge, vector<int> &chargeDates)
-{
-    // seek the last valid charge before prevDischarge
-    int prevCharge = chargeDates[0];
-    int j = 1;
-    while (j < chargeDates.size() && (prevDischarge - chargeDates[j] >= uParams.tDischarge)) {
-        prevCharge = chargeDates[j];
-        j++;
-    }
-    rInfo.cycleTiming.push_back({prevCharge, prevDischarge});
-}
-
 // CORE ALGORITHM
 void RevenueCalculator::calculateRInfo() {
+    // flush history
     rInfo.cycleTiming.clear();
+    rInfo.filteredCycleTiming.clear();
 
     int k = uParams.maxCycles, n = uParams.prices->size();
 
@@ -256,6 +258,20 @@ int RevenueCalculator::rMaxReference(int k) {
     return T_ik0[k];
 }
 
+// DEPRECATED
+void RevenueCalculator::addCycleTiming(int prevDischarge, vector<int> &chargeDates)
+{
+    // seek the last valid charge before prevDischarge
+    int prevCharge = chargeDates[0];
+    int j = 1;
+    while (j < chargeDates.size() && (prevDischarge - chargeDates[j] >= uParams.tDischarge)) {
+        prevCharge = chargeDates[j];
+        j++;
+    }
+    rInfo.cycleTiming.push_back({prevCharge, prevDischarge});
+}
+
+// DEPRECATED
 void RevenueCalculator::automataReference() {
     //if (!uParams.initialized) throw "User parameters not initialized!";
     // dynamic programming with Finite State Machine
@@ -301,10 +317,4 @@ void RevenueCalculator::automataReference() {
 
     // results
     rInfo.totalRevenue = neutral[n-1];
-    if (uParams.tDischarge > 1) {
-        rInfo.revenues = discharging[discharging.size()-1];
-    }
-    else {
-        rInfo.revenues = charged;
-    }
 }
