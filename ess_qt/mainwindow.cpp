@@ -77,11 +77,11 @@ void MainWindow::on_rMaxButton_clicked()
     if (validationResult) logText("[" + QDateTime::currentDateTime().toString() + "]: Result validation successful");
     else logText("[" + QDateTime::currentDateTime().toString() + "]: Validation failed: "  + QString::number(rCal->getRevenueInfo().validationSum));
 
-    if (ui->tChargeEdit->text().toInt() == 1 && ui->tDischargeEdit->text().toInt() == 1 && minPriceDiff == 0) {
+    /*if (ui->tChargeEdit->text().toInt() == 1 && ui->tDischargeEdit->text().toInt() == 1 && minPriceDiff == 0) {
         double reference = rCal->rMaxReference(nCycleMax);
         if (abs(rMax - reference) < 1.0) logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation successful");
         else logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation failed: " + QString::number(reference, 'f', 2));
-    }
+    }*/
     logText("[" + QDateTime::currentDateTime().toString() + "]: ==============================================");
 }
 
@@ -182,6 +182,7 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::on_actionRun_debug_content_triggered()
 {
+    logText("debug content empty");
     /*RevenueCalculator* rCal = new RevenueCalculator();
     vector<double> prices = {14, 15, 10, 11, 17, 20, 32, 11, 10, 33, 33}; // cents
     vector<double> prices = {24.14,22.12,13.01,4.97,9.81,18.37,23.50,27.17,36.56,
