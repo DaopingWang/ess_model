@@ -51,12 +51,14 @@ void MainWindow::on_rMaxButton_clicked()
     logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: rMax = " + QString::number(rMax, 'f', 2));
 
     // debug
-    rCal->automataReference();
+   /* rCal->automataReference();
     rMax = rCal->getRevenueInfo().totalRevenue;
-    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Automata rMax = " + QString::number(rMax, 'f', 2));
+    logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Automata rMax = " + QString::number(rMax, 'f', 2));*/
 
     rMax = rCal->rMaxReference(ui->nCycleMaxEdit->text().toInt());
     logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: K Reference rMax = " + QString::number(rMax, 'f', 2));
+    if (rCal->cycleVerification()) logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification successful");
+    else logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification failed");
 }
 
 void MainWindow::on_saveResultAsButton_clicked()
@@ -169,6 +171,8 @@ void MainWindow::on_actionRun_debug_content_triggered()
     logText("Maximum revenue reference: " + QString::number(rMax));
     rCal->calculateRInfo();
     logText("Maximum revenue func: " + QString::number(rCal->getRevenueInfo().totalRevenue));
+    if (rCal->cycleVerification()) logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification successful");
+    else logText("[" + QString::number(QDateTime::currentSecsSinceEpoch()) + "]: Verification failed");
 
     delete rCal;
     return;

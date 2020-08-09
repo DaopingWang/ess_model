@@ -56,6 +56,14 @@ RevenueInfo RevenueCalculator::getRevenueInfo() {
     return rInfo;
 }
 
+bool RevenueCalculator::cycleVerification()
+{
+    double r = 0;
+    for (pair<int, int> c : rInfo.cycleTiming) r += dischargePrices[c.second] - chargePrices[c.first];
+    if (r != rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
+    return true;
+}
+
 void RevenueCalculator::calRMaxCycleUnlimited()
 {
     int n = uParams.prices->size();
@@ -75,8 +83,11 @@ void RevenueCalculator::calRMaxCycleUnlimited()
         // discharge?
         if (i == n-1 && prevDischarge != -1) {
             addCycleTiming(prevDischarge, chargeDates);
-        } else if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
+        }
+
+        if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
             dischargeDates.push_back(i);
+            neutral[i] = charged[chargeCoolDown] + dischargePrices[i];
 
             // if this discharge isnt the first, and the distance between this discharge and
             // last discharge is greater than tCycle (last tdischarge guarantees a cycle)
@@ -84,14 +95,20 @@ void RevenueCalculator::calRMaxCycleUnlimited()
                 addCycleTiming(prevDischarge, chargeDates);
             }
             prevDischarge = i;
+
+        } else {
+            neutral[i] = neutral[i-1];
         }
-        neutral[i] = max(neutral[i-1], charged[chargeCoolDown] + dischargePrices[i]);
+
 
         // charge?
         if (neutral[dischargeCoolDown] - chargePrices[i] > charged[i-1]) {
             chargeDates.push_back(i);
+            charged[i] = neutral[dischargeCoolDown] - chargePrices[i];
+        } else {
+            charged[i] = charged[i-1];
         }
-        charged[i] = max(charged[i-1], neutral[dischargeCoolDown] - chargePrices[i]);
+
     }
 
     rInfo.totalRevenue = neutral[n-1];
