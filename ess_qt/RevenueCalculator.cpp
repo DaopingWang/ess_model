@@ -68,7 +68,6 @@ bool RevenueCalculator::cycleValidation()
 void RevenueCalculator::calRMaxCycleUnlimited()
 {
     int n = uParams.prices->size();
-    int tCycle = uParams.tCharge + uParams.tDischarge;
     vector<double> neutral(n, 0);
     vector<double> charged(n, INT32_MIN);
     vector<int> chargeDates, dischargeDates;
@@ -77,7 +76,12 @@ void RevenueCalculator::calRMaxCycleUnlimited()
 
     vector<RevenueLink*> chargeRL(n, nullptr), dischargeRL(n, nullptr);
 
-    int prevDischarge = -1;
+    RevenueLink* initialRL = new RevenueLink();
+    initialRL->r = -chargePrices[0];
+    initialRL->parent = nullptr;
+    initialRL->ind = 0;
+    initialRL->type = 1;
+    chargeRL[0] = initialRL;
 
     for (int i = 1; i < n; i++) { //- (uParams.tDischarge - 1)
         int chargeCoolDown = max(0, i-uParams.tCharge);
@@ -147,7 +151,6 @@ void RevenueCalculator::addCycleTiming(int prevDischarge, vector<int> &chargeDat
 
 // CORE ALGORITHM
 void RevenueCalculator::calculateRInfo() {
-    // flush histories
     rInfo.cycleTiming.clear();
 
     int k = uParams.maxCycles, n = uParams.prices->size();
@@ -158,12 +161,14 @@ void RevenueCalculator::calculateRInfo() {
         return;
     }
 
-    int tCycle = uParams.tCharge + uParams.tDischarge;
-
     // cycle number limited
     vector<vector<double>> neutral(n, vector<double>(k+1, 0));
     vector<vector<double>> charged(n, vector<double>(k+1, INT32_MIN));
+    vector<vector<RevenueLink*>> neutralRL(n, vector<RevenueLink*>(k+1, nullptr));
+    vector<vector<RevenueLink*>> chargeRL(n, vector<RevenueLink*>(k+1, nullptr));
+
     vector<vector<int>> chargeDates(k+1, vector<int>()), dischargeDates(k+1, vector<int>());
+
     for (int i = 1; i <= k; i++) {
         chargeDates[i].push_back(0);
     }
@@ -174,41 +179,65 @@ void RevenueCalculator::calculateRInfo() {
     }
     for (int j = 1; j <= k; j++) {
         charged[0][j] = -chargePrices[0];
+        RevenueLink* rl = new RevenueLink();
+        rl->r = -chargePrices[0];
+        rl->parent = nullptr;
+        rl->ind = 0;
+        rl->type = 1;
+        chargeRL[0][j] = rl;
     }
 
-    for (int i = 1; i < n; i++) {
-        for (int j = 1; j <= k; j++) {
+    for (int j = 1; j <= k; j++) {
+        for (int i = 1; i < n; i++) {
             int chargeCoolDown = max(0, i-uParams.tCharge);
             int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
             // hold vs discharge
-            if (charged[chargeCoolDown][j-1] + dischargePrices[i] > neutral[i-1][j]) {
-                dischargeDates[j].push_back(i);
-                neutral[i][j] = charged[chargeCoolDown][j-1] + dischargePrices[i];
+            if (charged[chargeCoolDown][j] + dischargePrices[i] > neutral[i-1][j]) {
+                //dischargeDates[j].push_back(i);
+                neutral[i][j] = charged[chargeCoolDown][j] + dischargePrices[i];
+
+                RevenueLink* rl = new RevenueLink();
+                rl->r = neutral[i][j];
+                rl->parent = i-uParams.tCharge < 0 ? nullptr : chargeRL[i-uParams.tCharge][j];
+                rl->ind = i;
+                rl->type = 2;
+                neutralRL[i][j] = rl;
+
             } else {
                 neutral[i][j] = neutral[i-1][j];
+                neutralRL[i][j] = neutralRL[i-1][j];
             }
 
             // rest vs charge
-            if (neutral[dischargeCoolDown][j] - chargePrices[i] > charged[i-1][j]) {
-                chargeDates[j].push_back(i);
-                charged[i][j] = neutral[dischargeCoolDown][j] - chargePrices[i];
+            if (neutral[dischargeCoolDown][j-1] - chargePrices[i] > charged[i-1][j]) {
+                //chargeDates[j].push_back(i);
+                charged[i][j] = neutral[dischargeCoolDown][j-1] - chargePrices[i];
+
+                RevenueLink* rl = new RevenueLink();
+                rl->r = charged[i][j];
+                rl->parent = i-uParams.tDischarge < 0 ? nullptr : neutralRL[i-uParams.tDischarge][j-1];
+                rl->ind = i;
+                rl->type = 1;
+                chargeRL[i][j] = rl;
             } else {
                 charged[i][j] = charged[i-1][j];
+                chargeRL[i][j] = chargeRL[i-1][j];
             }
-
         }
     }
 
-    int prevDischarge = -1;
-    for (int i = 0; i < dischargeDates[k].size(); i++) {
-        if ((prevDischarge != -1 && dischargeDates[k][i] - prevDischarge >= tCycle)) {
-            addCycleTiming(prevDischarge, chargeDates[k]);
+    RevenueLink* rl = neutralRL[n-1][k];
+    pair<int, int> p;
+    while (rl != nullptr) {
+        if (rl->type == 2) p.second = rl->ind;
+        else {
+            p.first = rl->ind;
+            rInfo.cycleTiming.push_back(p);
         }
-        prevDischarge = dischargeDates[k][i];
+        rl = rl->parent;
     }
-    if (prevDischarge != -1)
-        addCycleTiming(prevDischarge, chargeDates[k]);
+
     rInfo.totalRevenue = neutral[n-1][k];
 }
 
