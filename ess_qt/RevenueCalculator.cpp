@@ -56,11 +56,12 @@ RevenueInfo RevenueCalculator::getRevenueInfo() {
     return rInfo;
 }
 
-bool RevenueCalculator::cycleVerification()
+bool RevenueCalculator::cycleValidation()
 {
     double r = 0;
     for (pair<int, int> c : rInfo.cycleTiming) r += dischargePrices[c.second] - chargePrices[c.first];
-    if (r != rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
+    rInfo.validationSum = r;
+    if ((int) r != (int) rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
     return true;
 }
 
@@ -74,6 +75,8 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     charged[0] = -chargePrices[0];
     chargeDates.push_back(0);
 
+    vector<RevenueLink*> chargeRL(n, nullptr), dischargeRL(n, nullptr);
+
     int prevDischarge = -1;
 
     for (int i = 1; i < n; i++) { //- (uParams.tDischarge - 1)
@@ -81,34 +84,50 @@ void RevenueCalculator::calRMaxCycleUnlimited()
         int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
         // discharge?
-        if (i == n-1 && prevDischarge != -1) {
-            addCycleTiming(prevDischarge, chargeDates);
-        }
-
         if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
-            dischargeDates.push_back(i);
+            //dischargeDates.push_back(i);
             neutral[i] = charged[chargeCoolDown] + dischargePrices[i];
 
-            // if this discharge isnt the first, and the distance between this discharge and
-            // last discharge is greater than tCycle (last tdischarge guarantees a cycle)
-            if ((prevDischarge != -1 && i - prevDischarge >= tCycle)) {
-                addCycleTiming(prevDischarge, chargeDates);
-            }
-            prevDischarge = i;
+            RevenueLink* rl = new RevenueLink();
+            rl->r = neutral[i];
+            rl->parent = i-uParams.tCharge < 0 ? nullptr : chargeRL[i-uParams.tCharge];
+            rl->ind = i;
+            rl->type = 2;
+            dischargeRL[i] = rl;
 
         } else {
             neutral[i] = neutral[i-1];
+            dischargeRL[i] = dischargeRL[i-1];
         }
 
 
         // charge?
         if (neutral[dischargeCoolDown] - chargePrices[i] > charged[i-1]) {
-            chargeDates.push_back(i);
+            //chargeDates.push_back(i);
             charged[i] = neutral[dischargeCoolDown] - chargePrices[i];
+
+            RevenueLink* rl = new RevenueLink();
+            rl->r = charged[i];
+            rl->parent = i-uParams.tDischarge < 0 ? nullptr : dischargeRL[i-uParams.tDischarge];
+            rl->ind = i;
+            rl->type = 1;
+            chargeRL[i] = rl;
+
         } else {
             charged[i] = charged[i-1];
+            chargeRL[i] = chargeRL[i-1];
         }
+    }
 
+    RevenueLink* rl = dischargeRL[n-1];
+    pair<int, int> p;
+    while (rl != nullptr) {
+        if (rl->type == 2) p.second = rl->ind;
+        else {
+            p.first = rl->ind;
+            rInfo.cycleTiming.push_back(p);
+        }
+        rl = rl->parent;
     }
 
     rInfo.totalRevenue = neutral[n-1];
@@ -235,7 +254,7 @@ void RevenueCalculator::automataReference() {
                 charging[j][i] = charging[j-1][i-1];
             }
             charged[i] = max(charged[i-1], charging[charging.size()-1][i-1]);
-            if (charging[charging.size()-1][i-1] > charged[i-1]) rInfo.chargeDates.push_back(i-uParams.tCharge+1);
+            //if (charging[charging.size()-1][i-1] > charged[i-1]) rInfo.chargeDates.push_back(i-uParams.tCharge+1);
         } else {
             charged[i] = max(charged[i-1], neutral[i-1] - chargePrices[i]);
         }
@@ -245,7 +264,7 @@ void RevenueCalculator::automataReference() {
                 discharging[j][i] = discharging[j-1][i-1];
             }
             neutral[i] = max(neutral[i-1], discharging[discharging.size()-1][i-1]);
-            if (discharging[discharging.size()-1][i-1] > neutral[i-1]) rInfo.dischargeDates.push_back(i-uParams.tDischarge+1);
+            //if (discharging[discharging.size()-1][i-1] > neutral[i-1]) rInfo.dischargeDates.push_back(i-uParams.tDischarge+1);
         } else {
             neutral[i] = max(neutral[i-1], charged[i-1] + dischargePrices[i]);
         }

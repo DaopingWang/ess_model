@@ -13,11 +13,16 @@
 
 using namespace std;
 
+struct RevenueLink {
+    RevenueLink* parent;
+    double r;
+    int type; // 1 for charge 2 for discharge
+    int ind;
+};
+
 struct RevenueInfo {
-    double totalRevenue; // in cent
-    int cycles;
-    vector<int> chargeDates;
-    vector<int> dischargeDates;
+    double totalRevenue;
+    double validationSum;
     vector<pair<int, int>> cycleTiming;
     vector<double> revenues;
     bool initialized;
@@ -40,7 +45,7 @@ public:
     int rMaxReference(int k);
     void setUserParams(vector<double>* prices, const int tCharge, const int tDischarge, const double minPriceDiff, const int maxCycles);
     RevenueInfo getRevenueInfo();
-    bool cycleVerification();
+    bool cycleValidation();
 
 private:
     RevenueInfo rInfo;
