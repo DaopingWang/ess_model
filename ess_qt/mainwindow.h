@@ -54,6 +54,8 @@ private:
     vector<double> *priceData;
 
     QString openedFilename;
+    bool fileLoaded;
+    bool fileProcessed;
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H

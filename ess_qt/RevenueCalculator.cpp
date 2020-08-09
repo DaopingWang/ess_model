@@ -77,6 +77,11 @@ bool RevenueCalculator::cycleValidation()
 
 }
 
+UserParams RevenueCalculator::getUParams() const
+{
+    return uParams;
+}
+
 void RevenueCalculator::calRMaxCycleUnlimited()
 {
     int n = uParams.prices->size();

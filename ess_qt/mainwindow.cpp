@@ -12,6 +12,9 @@ MainWindow::MainWindow(QWidget *parent)
     priceDataDates = nullptr;
     hourColumnIndices = nullptr;
 
+    fileLoaded = false;
+    fileProcessed = false;
+
     // lineedit validation
     ui->nCycleMaxEdit->setValidator(new QIntValidator(1, INT32_MAX, this));         // still accepting 0??
     ui->deltaPMinEdit->setValidator(new QDoubleValidator(0, INT32_MAX, 2, this));
@@ -33,7 +36,9 @@ MainWindow::~MainWindow()
 void MainWindow::on_rMaxButton_clicked()
 {
     // validation
-    if (!validateUserParams()) return;
+    if (!validateUserParams() || !fileLoaded) return;
+
+    fileProcessed = true;
 
     double minPriceDiff = ui->deltaPMinEdit->text().isEmpty() ? 0.0 : ui->deltaPMinEdit->text().toDouble();
     int nCycleMax = ui->nCycleMaxEdit->text().isEmpty() ? INT32_MAX : ui->nCycleMaxEdit->text().toInt();
@@ -76,9 +81,8 @@ void MainWindow::on_rMaxButton_clicked()
         double reference = rCal->rMaxReference(nCycleMax);
         if (abs(rMax - reference) < 1.0) logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation successful");
         else logText("[" + QDateTime::currentDateTime().toString() + "]: Enhanced validation failed: " + QString::number(reference, 'f', 2));
-
     }
-    //logText("[" + QDateTime::currentDateTime().toString() + "]: ==============================================");
+    logText("[" + QDateTime::currentDateTime().toString() + "]: ==============================================");
 }
 
 void MainWindow::on_openFile_triggered()
@@ -144,6 +148,8 @@ void MainWindow::on_openFile_triggered()
 
         lineInd++;
     }
+
+    fileLoaded = true;
     logText("[" + QDateTime::currentDateTime().toString() + "]: Price data csv successfully loaded: " + openedFilename);
 }
 
@@ -211,5 +217,46 @@ void MainWindow::on_actionSave_as_triggered()
 
 void MainWindow::on_saveResultAsButton_clicked()
 {
-    logText("[" + QDateTime::currentDateTime().toString() + "]: Result saved");
+    if (!fileProcessed) {
+        QMessageBox::warning(this, "Warning", "Cannot write file: CSV not loaded or processed!");
+        return;
+    }
+    QString filename = QFileDialog::getSaveFileName(this, "Save to...", openedFilename + "_result.csv", "CSV files (.csv);;Zip files (.zip, *.7z)", 0, 0);
+    QFile data(filename);
+    if(data.open(QFile::WriteOnly | QFile::Truncate)) {
+        QTextStream output(&data);
+        RevenueInfo rInfo = rCal->getRevenueInfo();
+        UserParams uParams = rCal->getUParams();
+
+        output << "# Filename = " + filename << endl;
+        output << "# User parameters: nCycleMax = " << QString::number(uParams.maxCycles)
+               << "; deltaPMin = " << QString::number(uParams.minPriceDiff)
+               << "; tCharge = " << QString::number(uParams.tCharge)
+               << "; tDischarge = " << QString::number(uParams.tDischarge)
+               << endl;
+
+        if (uParams.minPriceDiff != 0) {
+            output << "# Maximum Revenue = " + QString::number(rInfo.filteredSum) << endl;
+            output << "# nCycle = " + QString::number(rInfo.filteredCycleTiming.size()) << endl;
+            output << "charge, discharge" << endl;
+            for (int i = rInfo.filteredCycleTiming.size()-1; i >= 0; i--) {
+                output << QString::number(rInfo.filteredCycleTiming[i].first) << "," << QString::number(rInfo.filteredCycleTiming[i].second) << endl;
+            }
+        }
+        else {
+            output << "# Maximum Revenue = " + QString::number(rInfo.totalRevenue) << endl;
+            output << "# nCycle = " + QString::number(rInfo.cycleTiming.size()) << endl;
+            output << "charge, discharge" << endl;
+            for (int i = rInfo.cycleTiming.size()-1; i >= 0; i--) {
+                output << QString::number(rInfo.cycleTiming[i].first) << "," << QString::number(rInfo.cycleTiming[i].second) << endl;
+            }
+        }
+
+        data.close();
+    } else {
+        logText("[" + QDateTime::currentDateTime().toString() + "]: Result saving failed: " + data.errorString());
+        return;
+    }
+
+    logText("[" + QDateTime::currentDateTime().toString() + "]: Result saved under " + filename);
 }

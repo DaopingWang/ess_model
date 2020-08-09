@@ -48,6 +48,8 @@ public:
     RevenueInfo getRevenueInfo();
     bool cycleValidation();
 
+    UserParams getUParams() const;
+
 private:
     RevenueInfo rInfo;
     UserParams uParams;
