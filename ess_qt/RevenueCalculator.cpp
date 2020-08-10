@@ -61,19 +61,21 @@ RevenueInfo RevenueCalculator::getRevenueInfo() {
 bool RevenueCalculator::cycleValidation()
 {
     double r = 0;
-    double filteredR = 0;
+    //double filteredR = 0;
     for (pair<int, int> c : rInfo.cycleTiming) {
         double revenue = dischargePrices[c.second] - chargePrices[c.first];
         r += revenue;
         rInfo.revenues.push_back(revenue);
-        if (revenue >= uParams.minPriceDiff) {
+        if (revenue < uParams.minPriceDiff) qDebug() << "revenue too low: " << QString::number(revenue) << endl;
+        if (c.second - c.first < uParams.tCharge) qDebug() << "cycle violation" << endl;
+        /*if (revenue >= uParams.minPriceDiff) {
             filteredR += revenue;
             rInfo.filteredCycleTiming.push_back(c);
             rInfo.filteredRevenues.push_back(revenue);
-        }
+        }*/
     }
     rInfo.validationSum = r;
-    rInfo.filteredSum = filteredR;
+    //rInfo.filteredSum = filteredR;
     if ((int) r != (int) rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
     return true;
 
@@ -104,13 +106,17 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     chargeRL[0] = initialRL;
 
     for (int i = 1; i < n; i++) { //- (uParams.tDischarge - 1)
-        int chargeCoolDown = max(0, i-uParams.tCharge);
+        int chargeCoolDown = i-uParams.tCharge;
         int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
         // discharge?
-        if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
+        //double curRevenue = i-uParams.tCharge < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[i-uParams.tCharge]->ind];
+        if (chargeCoolDown < 0) {
+            neutral[i] = neutral[i-1];
+            dischargeRL[i] = dischargeRL[i-1];
+        } else if (charged[chargeCoolDown] + dischargePrices[i] - uParams.minPriceDiff > neutral[i-1]) { // && curRevenue >= uParams.minPriceDiff) {
             //dischargeDates.push_back(i);
-            neutral[i] = charged[chargeCoolDown] + dischargePrices[i];
+            neutral[i] = charged[chargeCoolDown] + dischargePrices[i] - uParams.minPriceDiff;
 
             RevenueLink* rl = new RevenueLink();
             rl->r = neutral[i];
@@ -158,7 +164,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     // clean up mem
     for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
 
-    rInfo.totalRevenue = neutral[n-1];
+    rInfo.totalRevenue = neutral[n-1] + rInfo.cycleTiming.size() * uParams.minPriceDiff;
 }
 
 // CORE ALGORITHM
@@ -173,6 +179,7 @@ void RevenueCalculator::calculateRInfo() {
 
     // no cycle limitation
     if (k > n / 2) {
+        //k = n / 2 + 1;
         calRMaxCycleUnlimited();
         return;
     }
@@ -209,13 +216,17 @@ void RevenueCalculator::calculateRInfo() {
 
     for (int j = 1; j <= k; j++) {
         for (int i = 1; i < n; i++) {
-            int chargeCoolDown = max(0, i-uParams.tCharge);
+            int chargeCoolDown = i-uParams.tCharge;
             int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
             // hold vs discharge
-            if (charged[chargeCoolDown][j] + dischargePrices[i] > neutral[i-1][j]) {
+            //double curRevenue = i-uParams.tCharge < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[i-uParams.tCharge][j]->ind];
+            if (chargeCoolDown < 0) {
+                neutral[i][j] = neutral[i-1][j];
+                dischargeRL[i][j] = dischargeRL[i-1][j];
+            } else if (charged[chargeCoolDown][j] + dischargePrices[i] - uParams.minPriceDiff > neutral[i-1][j] ) { // && curRevenue >= uParams.minPriceDiff) {
                 //dischargeDates[j].push_back(i);
-                neutral[i][j] = charged[chargeCoolDown][j] + dischargePrices[i];
+                neutral[i][j] = charged[chargeCoolDown][j] + dischargePrices[i] - uParams.minPriceDiff;
 
                 RevenueLink* rl = new RevenueLink();
                 rl->r = neutral[i][j];
@@ -231,7 +242,7 @@ void RevenueCalculator::calculateRInfo() {
             }
 
             // rest vs charge
-            if (neutral[dischargeCoolDown][j-1] - chargePrices[i] > charged[i-1][j]) {
+            if (neutral[dischargeCoolDown][j-1] - chargePrices[i]> charged[i-1][j]) {
                 //chargeDates[j].push_back(i);
                 charged[i][j] = neutral[dischargeCoolDown][j-1] - chargePrices[i];
 
@@ -260,10 +271,10 @@ void RevenueCalculator::calculateRInfo() {
         rl = rl->parent;
     }
 
-
     // clean up mem
     for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
-    rInfo.totalRevenue = neutral[n-1][k];
+
+    rInfo.totalRevenue = neutral[n-1][k] + rInfo.cycleTiming.size() * uParams.minPriceDiff;
 }
 
 int RevenueCalculator::rMaxReference(int k) {

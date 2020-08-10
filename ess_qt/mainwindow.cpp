@@ -36,7 +36,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_rMaxButton_clicked()
 {
     delete rCal;
-    rCal = new RevenueCalculator;
+    rCal = new RevenueCalculator();
 
     // validation
     if (!validateUserParams() || !fileLoaded) return;
@@ -51,25 +51,23 @@ void MainWindow::on_rMaxButton_clicked()
 
     // set uParams etc
     rCal->setUserParams(priceData, ui->tChargeEdit->text().toInt(), ui->tDischargeEdit->text().toInt(), minPriceDiff, nCycleMax);
-    //logText("[" + QDateTime::currentDateTime().toString() + "]: User params loaded");
-
-    //logText("[" + QDateTime::currentDateTime().toString() + "]: Calculating rMax...");
     rCal->calculateRInfo();
-    //logText("[" + QDateTime::currentDateTime().toString() + "]: rMax calculated");
 
     double rMax = rCal->getRevenueInfo().totalRevenue;
     int nCycle = rCal->getRevenueInfo().cycleTiming.size();
     bool validationResult = rCal->cycleValidation();
 
-    if (minPriceDiff != 0) {
+    /*if (minPriceDiff != 0) {
         double filteredRMax = rCal->getRevenueInfo().filteredSum;
         int filteredNCycle = rCal->getRevenueInfo().filteredCycleTiming.size();
         logText("[" + QDateTime::currentDateTime().toString() + "]: rMax = " + QString::number(filteredRMax, 'f', 2));
         logText("[" + QDateTime::currentDateTime().toString() + "]: nCycle = " + QString::number(filteredNCycle));
     } else {
-        logText("[" + QDateTime::currentDateTime().toString() + "]: rMax = " + QString::number(rMax, 'f', 2));
-        logText("[" + QDateTime::currentDateTime().toString() + "]: nCycle = " + QString::number(nCycle));
-    }
+
+    }*/
+
+    logText("[" + QDateTime::currentDateTime().toString() + "]: rMax = " + QString::number(rMax, 'f', 2));
+    logText("[" + QDateTime::currentDateTime().toString() + "]: nCycle = " + QString::number(nCycle));
 
 
     // debug
@@ -134,7 +132,8 @@ void MainWindow::on_openFile_triggered()
         }
 
         // first element of each line is the price timestamp
-        priceDataDates->append(splittedLine.at(0));
+        //priceDataDates->append(splittedLine.at(0));
+        priceDataDates->insert(0, splittedLine.at(0));
         vector<double> curPrice;
         for (int i = 1; i < splittedLine.size(); i++) {
 
@@ -240,7 +239,7 @@ void MainWindow::on_saveResultAsButton_clicked()
                << "; tDischarge = " << QString::number(uParams.tDischarge)
                << endl;
 
-        if (uParams.minPriceDiff != 0) {
+        /*if (uParams.minPriceDiff != 0) {
             output << "# Maximum Revenue = " + QString::number(rInfo.filteredSum) << endl;
             output << "# nCycle = " + QString::number(rInfo.filteredCycleTiming.size()) << endl;
             output << "charge,discharge,revenue" << endl;
@@ -251,14 +250,22 @@ void MainWindow::on_saveResultAsButton_clicked()
             }
         }
         else {
-            output << "# Maximum Revenue = " + QString::number(rInfo.totalRevenue) << endl;
-            output << "# nCycle = " + QString::number(rInfo.cycleTiming.size()) << endl;
-            output << "charge,discharge,revenue" << endl;
-            for (int i = rInfo.cycleTiming.size()-1; i >= 0; i--) {
-                output << QString::number(rInfo.cycleTiming[i].first) << ","
-                       << QString::number(rInfo.cycleTiming[i].second) << ","
-                       << QString::number(rInfo.revenues[i]) << endl;
-            }
+
+        }*/
+
+        output << "# Maximum Revenue = " + QString::number(rInfo.totalRevenue) << endl;
+        output << "# nCycle = " + QString::number(rInfo.cycleTiming.size()) << endl;
+        output << "charge,discharge,revenue" << endl;
+        for (int i = rInfo.cycleTiming.size()-1; i >= 0; i--) {
+            int dayIndex = rInfo.cycleTiming[i].first / 24;
+            int day2Index = rInfo.cycleTiming[i].second / 24;
+            int hourIndex = rInfo.cycleTiming[i].first % 24;
+            int hour2Index = rInfo.cycleTiming[i].second % 24;
+            output << QString::number(rInfo.cycleTiming[i].first + 1)
+                   << " (" << priceDataDates->at(dayIndex) << " " << priceDataHeader->at(hourColumnIndices->at(hourIndex)) << "),"
+                   << QString::number(rInfo.cycleTiming[i].second + 1)
+                   << " (" << priceDataDates->at(day2Index) << " " << priceDataHeader->at(hourColumnIndices->at(hour2Index)) << "),"
+                   << QString::number(rInfo.revenues[i]) << endl;
         }
 
         data.close();

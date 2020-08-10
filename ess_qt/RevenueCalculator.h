@@ -10,6 +10,7 @@
 #include <stack>
 #include <algorithm>
 #include <iostream>
+#include <QDebug>
 
 using namespace std;
 
