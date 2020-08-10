@@ -35,6 +35,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_rMaxButton_clicked()
 {
+    delete rCal;
+    rCal = new RevenueCalculator;
+
     // validation
     if (!validateUserParams() || !fileLoaded) return;
 
@@ -150,6 +153,7 @@ void MainWindow::on_openFile_triggered()
     }
 
     fileLoaded = true;
+    fileProcessed = false;
     logText("[" + QDateTime::currentDateTime().toString() + "]: Price data csv successfully loaded: " + openedFilename);
 }
 
@@ -239,17 +243,21 @@ void MainWindow::on_saveResultAsButton_clicked()
         if (uParams.minPriceDiff != 0) {
             output << "# Maximum Revenue = " + QString::number(rInfo.filteredSum) << endl;
             output << "# nCycle = " + QString::number(rInfo.filteredCycleTiming.size()) << endl;
-            output << "charge, discharge" << endl;
+            output << "charge,discharge,revenue" << endl;
             for (int i = rInfo.filteredCycleTiming.size()-1; i >= 0; i--) {
-                output << QString::number(rInfo.filteredCycleTiming[i].first) << "," << QString::number(rInfo.filteredCycleTiming[i].second) << endl;
+                output << QString::number(rInfo.filteredCycleTiming[i].first) << ","
+                       << QString::number(rInfo.filteredCycleTiming[i].second) << ","
+                       << QString::number(rInfo.filteredRevenues[i]) << endl;
             }
         }
         else {
             output << "# Maximum Revenue = " + QString::number(rInfo.totalRevenue) << endl;
             output << "# nCycle = " + QString::number(rInfo.cycleTiming.size()) << endl;
-            output << "charge, discharge" << endl;
+            output << "charge,discharge,revenue" << endl;
             for (int i = rInfo.cycleTiming.size()-1; i >= 0; i--) {
-                output << QString::number(rInfo.cycleTiming[i].first) << "," << QString::number(rInfo.cycleTiming[i].second) << endl;
+                output << QString::number(rInfo.cycleTiming[i].first) << ","
+                       << QString::number(rInfo.cycleTiming[i].second) << ","
+                       << QString::number(rInfo.revenues[i]) << endl;
             }
         }
 

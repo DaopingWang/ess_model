@@ -26,6 +26,8 @@ struct RevenueInfo {
     double filteredSum;
     vector<pair<int, int>> cycleTiming;
     vector<pair<int, int>> filteredCycleTiming;
+    vector<double> revenues;
+    vector<double> filteredRevenues;
     bool initialized;
 };
 

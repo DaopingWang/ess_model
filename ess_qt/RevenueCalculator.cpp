@@ -65,9 +65,11 @@ bool RevenueCalculator::cycleValidation()
     for (pair<int, int> c : rInfo.cycleTiming) {
         double revenue = dischargePrices[c.second] - chargePrices[c.first];
         r += revenue;
+        rInfo.revenues.push_back(revenue);
         if (revenue >= uParams.minPriceDiff) {
             filteredR += revenue;
             rInfo.filteredCycleTiming.push_back(c);
+            rInfo.filteredRevenues.push_back(revenue);
         }
     }
     rInfo.validationSum = r;
@@ -92,6 +94,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     chargeDates.push_back(0);
 
     vector<RevenueLink*> chargeRL(n, nullptr), dischargeRL(n, nullptr);
+    vector<RevenueLink*> garbageCollector;
 
     RevenueLink* initialRL = new RevenueLink();
     initialRL->r = -chargePrices[0];
@@ -115,6 +118,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
             rl->ind = i;
             rl->type = 2;
             dischargeRL[i] = rl;
+            garbageCollector.push_back(rl);
 
         } else {
             neutral[i] = neutral[i-1];
@@ -133,7 +137,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
             rl->ind = i;
             rl->type = 1;
             chargeRL[i] = rl;
-
+            garbageCollector.push_back(rl);
         } else {
             charged[i] = charged[i-1];
             chargeRL[i] = chargeRL[i-1];
@@ -151,6 +155,9 @@ void RevenueCalculator::calRMaxCycleUnlimited()
         rl = rl->parent;
     }
 
+    // clean up mem
+    for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
+
     rInfo.totalRevenue = neutral[n-1];
 }
 
@@ -159,6 +166,8 @@ void RevenueCalculator::calculateRInfo() {
     // flush history
     rInfo.cycleTiming.clear();
     rInfo.filteredCycleTiming.clear();
+    rInfo.revenues.clear();
+    rInfo.filteredRevenues.clear();
 
     int k = uParams.maxCycles, n = uParams.prices->size();
 
@@ -171,8 +180,11 @@ void RevenueCalculator::calculateRInfo() {
     // cycle number limited
     vector<vector<double>> neutral(n, vector<double>(k+1, 0));
     vector<vector<double>> charged(n, vector<double>(k+1, INT32_MIN));
-    vector<vector<RevenueLink*>> neutralRL(n, vector<RevenueLink*>(k+1, nullptr));
+    vector<vector<RevenueLink*>> dischargeRL(n, vector<RevenueLink*>(k+1, nullptr));
     vector<vector<RevenueLink*>> chargeRL(n, vector<RevenueLink*>(k+1, nullptr));
+
+    // garbage collector
+    vector<RevenueLink*> garbageCollector;
 
     vector<vector<int>> chargeDates(k+1, vector<int>()), dischargeDates(k+1, vector<int>());
 
@@ -192,6 +204,7 @@ void RevenueCalculator::calculateRInfo() {
         rl->ind = 0;
         rl->type = 1;
         chargeRL[0][j] = rl;
+        garbageCollector.push_back(rl);
     }
 
     for (int j = 1; j <= k; j++) {
@@ -209,11 +222,12 @@ void RevenueCalculator::calculateRInfo() {
                 rl->parent = i-uParams.tCharge < 0 ? nullptr : chargeRL[i-uParams.tCharge][j];
                 rl->ind = i;
                 rl->type = 2;
-                neutralRL[i][j] = rl;
+                dischargeRL[i][j] = rl;
+                garbageCollector.push_back(rl);
 
             } else {
                 neutral[i][j] = neutral[i-1][j];
-                neutralRL[i][j] = neutralRL[i-1][j];
+                dischargeRL[i][j] = dischargeRL[i-1][j];
             }
 
             // rest vs charge
@@ -223,10 +237,11 @@ void RevenueCalculator::calculateRInfo() {
 
                 RevenueLink* rl = new RevenueLink();
                 rl->r = charged[i][j];
-                rl->parent = i-uParams.tDischarge < 0 ? nullptr : neutralRL[i-uParams.tDischarge][j-1];
+                rl->parent = i-uParams.tDischarge < 0 ? nullptr : dischargeRL[i-uParams.tDischarge][j-1];
                 rl->ind = i;
                 rl->type = 1;
                 chargeRL[i][j] = rl;
+                garbageCollector.push_back(rl);
             } else {
                 charged[i][j] = charged[i-1][j];
                 chargeRL[i][j] = chargeRL[i-1][j];
@@ -234,7 +249,7 @@ void RevenueCalculator::calculateRInfo() {
         }
     }
 
-    RevenueLink* rl = neutralRL[n-1][k];
+    RevenueLink* rl = dischargeRL[n-1][k];
     pair<int, int> p;
     while (rl != nullptr) {
         if (rl->type == 2) p.second = rl->ind;
@@ -245,6 +260,9 @@ void RevenueCalculator::calculateRInfo() {
         rl = rl->parent;
     }
 
+
+    // clean up mem
+    for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
     rInfo.totalRevenue = neutral[n-1][k];
 }
 
