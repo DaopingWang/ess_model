@@ -58,6 +58,7 @@ private:
     UserParams uParams;
     vector<double> chargePrices;
     vector<double> dischargePrices;
+    vector<bool> meaningfulChargingPos;
 
     void calRMaxCycleUnlimited();
     void addCycleTiming(int prevDischarge, vector<int> &chargeDates);

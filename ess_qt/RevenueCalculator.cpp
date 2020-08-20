@@ -16,6 +16,7 @@ RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, cons
     if (uParams.initialized) {
         chargePrices.clear();
         dischargePrices.clear();
+        meaningfulChargingPos.clear();
     }
 
     uParams.prices = prices;
@@ -51,6 +52,24 @@ RevenueCalculator::setUserParams(vector<double> *prices, const int tCharge, cons
         if (i - 1 + tDischarge >= prices->size()) d = INT32_MIN;
         dischargePrices.push_back(d);
     }
+
+    // evaluate if a charge price is meaningful regarding minPriceDiff
+    if (minPriceDiff == 0) {
+        for (int i = 0; i < chargePrices.size(); i++) meaningfulChargingPos.push_back(true);
+    } else {
+        for (int i = 0; i < chargePrices.size(); i++) meaningfulChargingPos.push_back(false);
+        for (int i = 0; i < chargePrices.size(); i++) {
+            for (int j = i + tCharge; j < dischargePrices.size(); j++) {
+                if (dischargePrices[j] - chargePrices[i] >= minPriceDiff) {
+                    meaningfulChargingPos[i] = true;
+                }
+            }
+        }
+    }
+
+    if (meaningfulChargingPos.size() != chargePrices.size()) qDebug() << "meaningful cp wrong size: "
+                                                                      << QString::number(meaningfulChargingPos.size())
+                                                                      << " vs " << QString::number(chargePrices.size()) << endl;
 }
 
 RevenueInfo RevenueCalculator::getRevenueInfo() {
@@ -61,21 +80,22 @@ RevenueInfo RevenueCalculator::getRevenueInfo() {
 bool RevenueCalculator::cycleValidation()
 {
     double r = 0;
-    //double filteredR = 0;
-    for (pair<int, int> c : rInfo.cycleTiming) {
+    bool firstRound = true;
+    for (int i = 0; i < rInfo.cycleTiming.size(); i++) {
+        pair<int, int> c = rInfo.cycleTiming.at(i);
+        if (!firstRound && rInfo.cycleTiming.at(i-1).first - c.second < uParams.tDischarge) qDebug() << "charge cycle violation: "
+                                                                                                     << QString::number(rInfo.cycleTiming.at(i-1).first) << " "
+                                                                                                     << QString::number(c.second) << endl;
+        firstRound = false;
         double revenue = dischargePrices[c.second] - chargePrices[c.first];
         r += revenue;
         rInfo.revenues.push_back(revenue);
         if (revenue < uParams.minPriceDiff) qDebug() << "revenue too low: " << QString::number(revenue) << endl;
-        if (c.second - c.first < uParams.tCharge) qDebug() << "cycle violation" << endl;
-        /*if (revenue >= uParams.minPriceDiff) {
-            filteredR += revenue;
-            rInfo.filteredCycleTiming.push_back(c);
-            rInfo.filteredRevenues.push_back(revenue);
-        }*/
+        if (c.second - c.first < uParams.tCharge) qDebug() << "discharge cycle violation"
+                                                           << QString::number(c.second) << " "
+                                                           << QString::number(c.first) << endl;
     }
     rInfo.validationSum = r;
-    //rInfo.filteredSum = filteredR;
     if ((int) r != (int) rInfo.totalRevenue || rInfo.cycleTiming.size() > uParams.maxCycles) return false;
     return true;
 
@@ -91,9 +111,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     int n = uParams.prices->size();
     vector<double> neutral(n, 0);
     vector<double> charged(n, INT32_MIN);
-    vector<int> chargeDates, dischargeDates;
     charged[0] = -chargePrices[0];
-    chargeDates.push_back(0);
 
     vector<RevenueLink*> chargeRL(n, nullptr), dischargeRL(n, nullptr);
     vector<RevenueLink*> garbageCollector;
@@ -110,13 +128,12 @@ void RevenueCalculator::calRMaxCycleUnlimited()
         int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
         // discharge?
-        //double curRevenue = i-uParams.tCharge < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[i-uParams.tCharge]->ind];
-        if (chargeCoolDown < 0) {
+        double curRevenue = chargeCoolDown < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[chargeCoolDown]->ind];
+        if (chargeCoolDown < 0 || curRevenue < uParams.minPriceDiff) {
             neutral[i] = neutral[i-1];
             dischargeRL[i] = dischargeRL[i-1];
-        } else if (charged[chargeCoolDown] + dischargePrices[i] - uParams.minPriceDiff > neutral[i-1]) { // && curRevenue >= uParams.minPriceDiff) {
-            //dischargeDates.push_back(i);
-            neutral[i] = charged[chargeCoolDown] + dischargePrices[i] - uParams.minPriceDiff;
+        } else if (charged[chargeCoolDown] + dischargePrices[i] > neutral[i-1]) {
+            neutral[i] = charged[chargeCoolDown] + dischargePrices[i];
 
             RevenueLink* rl = new RevenueLink();
             rl->r = neutral[i];
@@ -133,8 +150,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
 
 
         // charge?
-        if (neutral[dischargeCoolDown] - chargePrices[i] > charged[i-1]) {
-            //chargeDates.push_back(i);
+        if (meaningfulChargingPos[i] && neutral[dischargeCoolDown] - chargePrices[i] > charged[i-1]) {
             charged[i] = neutral[dischargeCoolDown] - chargePrices[i];
 
             RevenueLink* rl = new RevenueLink();
@@ -164,7 +180,7 @@ void RevenueCalculator::calRMaxCycleUnlimited()
     // clean up mem
     for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
 
-    rInfo.totalRevenue = neutral[n-1] + rInfo.cycleTiming.size() * uParams.minPriceDiff;
+    rInfo.totalRevenue = neutral[n-1];
 }
 
 // CORE ALGORITHM
@@ -193,12 +209,6 @@ void RevenueCalculator::calculateRInfo() {
     // garbage collector
     vector<RevenueLink*> garbageCollector;
 
-    vector<vector<int>> chargeDates(k+1, vector<int>()), dischargeDates(k+1, vector<int>());
-
-    for (int i = 1; i <= k; i++) {
-        chargeDates[i].push_back(0);
-    }
-
     charged[0][0] = -chargePrices[0];
     for (int i = 1; i < n; i++) {
         charged[i][0] = max(charged[i-1][0], -chargePrices[i]);
@@ -220,13 +230,12 @@ void RevenueCalculator::calculateRInfo() {
             int dischargeCoolDown = max(0, i-uParams.tDischarge);
 
             // hold vs discharge
-            //double curRevenue = i-uParams.tCharge < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[i-uParams.tCharge][j]->ind];
-            if (chargeCoolDown < 0) {
+            double curRevenue = chargeCoolDown < 0 ? INT32_MIN : dischargePrices[i] - chargePrices[chargeRL[chargeCoolDown][j]->ind];
+            if (chargeCoolDown < 0 || curRevenue < uParams.minPriceDiff) {
                 neutral[i][j] = neutral[i-1][j];
                 dischargeRL[i][j] = dischargeRL[i-1][j];
-            } else if (charged[chargeCoolDown][j] + dischargePrices[i] - uParams.minPriceDiff > neutral[i-1][j] ) { // && curRevenue >= uParams.minPriceDiff) {
-                //dischargeDates[j].push_back(i);
-                neutral[i][j] = charged[chargeCoolDown][j] + dischargePrices[i] - uParams.minPriceDiff;
+            } else if (charged[chargeCoolDown][j] + dischargePrices[i] > neutral[i-1][j] ) {
+                neutral[i][j] = charged[chargeCoolDown][j] + dischargePrices[i];
 
                 RevenueLink* rl = new RevenueLink();
                 rl->r = neutral[i][j];
@@ -242,8 +251,7 @@ void RevenueCalculator::calculateRInfo() {
             }
 
             // rest vs charge
-            if (neutral[dischargeCoolDown][j-1] - chargePrices[i]> charged[i-1][j]) {
-                //chargeDates[j].push_back(i);
+            if (meaningfulChargingPos[i] && neutral[dischargeCoolDown][j-1] - chargePrices[i]> charged[i-1][j]) {
                 charged[i][j] = neutral[dischargeCoolDown][j-1] - chargePrices[i];
 
                 RevenueLink* rl = new RevenueLink();
@@ -274,7 +282,7 @@ void RevenueCalculator::calculateRInfo() {
     // clean up mem
     for (auto pIter = garbageCollector.begin(); pIter != garbageCollector.end(); pIter++) delete (*pIter);
 
-    rInfo.totalRevenue = neutral[n-1][k] + rInfo.cycleTiming.size() * uParams.minPriceDiff;
+    rInfo.totalRevenue = neutral[n-1][k];
 }
 
 int RevenueCalculator::rMaxReference(int k) {
